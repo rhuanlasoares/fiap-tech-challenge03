@@ -25,4 +25,4 @@ labels:
 images:
 - name: analytics-service
   newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-analytics/analytics-service
-  newTag: 1c791e93a76b4f4b2f4e77f092f43d1d5381e5b0
+  newTag: b0fbc7f99eec223b13dd965c45a25deaeaf4192e
