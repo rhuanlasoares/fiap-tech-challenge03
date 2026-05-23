@@ -24,4 +24,4 @@ labels:
 images:
 - name: evaluation-service
   newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-evaluation/evaluation-service
-  newTag: d59e29e2395614cc57e8ff87c72ba9a6149df9b2
+  newTag: 5a1d1ec796b1fce1f60e82b59f71fdc01400d600
