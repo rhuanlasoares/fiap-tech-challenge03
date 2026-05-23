@@ -1,5 +1,5 @@
-# FROM python:3.13.13-alpine3.22 AS builder
-FROM python:3.13.13-alpine AS builder
+FROM python:3.13.13-alpine3.22 AS builder
+# FROM python:3.13.13-alpine AS builder
 
 WORKDIR /app
 
@@ -10,8 +10,8 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# FROM python:3.13.13-alpine3.22 AS production
-FROM python:3.13.13-alpine AS production
+FROM python:3.13.13-alpine3.22 AS production
+# FROM python:3.13.13-alpine AS production
 
 RUN adduser -D -s /bin/sh appuser
 
