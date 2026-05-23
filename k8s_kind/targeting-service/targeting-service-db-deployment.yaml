@@ -1,0 +1,56 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-targeting-service
+  namespace: targeting-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-targeting-service
+  template:
+    metadata:
+      labels:
+        app: db-targeting-service
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: targeting-secrets
+                  key: POSTGRES_DB
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: targeting-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: targeting-secrets
+                  key: POSTGRES_USER
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            # - name: init-sql
+            #   mountPath: /docker-entrypoint-initdb.d
+          resources:
+            requests:
+              cpu: 1m
+              memory: 100Mi
+            limits:
+              cpu: 10m
+              memory: 250Mi
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-targeting-pvc
+        # - name: init-sql
+        #   configMap:
+        #     name: targeting-db-init

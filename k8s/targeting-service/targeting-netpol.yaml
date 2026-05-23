@@ -1,0 +1,29 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: targeting-netpol
+  namespace: targeting-ns
+spec:
+  podSelector:
+    matchLabels:
+      app: targeting-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: evaluation-ns
+      podSelector:
+        matchLabels:
+          app: evaluation-service
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring-ns
+    ports:
+    - protocol: TCP
+      port: 8003
+  egress:
+  - {}

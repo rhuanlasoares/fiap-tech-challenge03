@@ -1,0 +1,11 @@
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: targeting-pdb
+  namespace: targeting-ns
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: targeting-service

@@ -1,0 +1,14 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: secret-writer-binding
+  namespace: evaluation-ns
+subjects:
+  - kind: ServiceAccount
+    name: sa-gke
+    namespace: evaluation-ns
+roleRef:
+  kind: Role
+  name: secret-writer
+  apiGroup: rbac.authorization.k8s.io

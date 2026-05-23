@@ -1,0 +1,98 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evaluation-service
+  namespace: evaluation-ns
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: "25%"
+      maxUnavailable: "25%"
+  selector:
+    matchLabels:
+      app: evaluation-service
+  template:
+    metadata:
+      labels:
+        app: evaluation-service
+    spec:
+      serviceAccountName: sa-gke
+      containers:
+        - name: evaluation-service
+          image: evaluation-service
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            periodSeconds: 10
+            initialDelaySeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            periodSeconds: 10
+            initialDelaySeconds: 20
+          ports:
+            - containerPort: 8004
+          env:
+            - name: SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-api-key
+                  key: API_KEY
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-ip-redis
+                  key: REDIS_URL
+            - name: FLAG_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-secrets
+                  key: FLAG_SERVICE_URL
+            - name: TARGETING_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-secrets
+                  key: TARGETING_SERVICE_URL
+            - name: AWS_SQS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-aws-secrets
+                  key: AWS_SQS_QUEUE_URL
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-secrets
+                  key: AWS_REGION
+            - name: PORT
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-secrets
+                  key: PORT
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-aws-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-aws-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-aws-secrets
+                  key: AWS_SESSION_TOKEN
+          resources:
+            requests:
+              cpu: 16m
+              memory: 32Mi
+            limits:
+              cpu: 128m
+              memory: 256Mi

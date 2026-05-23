@@ -1,0 +1,122 @@
+---
+- hosts: localhost
+  gather_facts: no
+  vars:
+    env_dir: "{{ env | default('k8s_kind') }}"
+    base_path: "../../../{{ env_dir }}"
+  tasks:
+    - name: Apply gateway-api
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/gateway-api/"
+      register: output
+
+    - name: Verificar gateway-api
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+
+    - name: "Iniciando deploy no ambiente: {{ env_dir }}"
+      debug:
+        msg: "Aplicando manifestos de {{ base_path }}"
+        
+    - name: Apply job-service
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/job-service/"
+      register: output
+
+    - name: Verificar job-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+
+    - name: "Iniciando deploy no ambiente: {{ env_dir }}"
+      debug:
+        msg: "Aplicando manifestos de {{ base_path }}"
+
+    - name: Apply auth-service
+      ansible.builtin.command: "kubectl apply -k {{ base_path }}/auth-service/"
+      register: output
+
+    - name: Verificar auth-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+    
+    - name: Apply auth-service http route
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/auth-service/auth-http-route.yaml"
+      register: output
+
+    - name: Verificar auth-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+
+
+    - name: Apply flag-service
+      ansible.builtin.command: "kubectl apply -k {{ base_path }}/flag-service/"
+      register: output
+
+    - name: Verificar flag-service
+      debug:
+        var: output.stdout_lines
+    
+    - name: Apply flag-service http route
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/flag-service/flag-http-route.yaml"
+      register: output
+
+    - name: Verificar flag-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+
+    - name: Apply targeting-service
+      ansible.builtin.command: "kubectl apply -k {{ base_path }}/targeting-service/"
+      register: output
+
+    - name: Verificar targeting-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+    
+    - name: Apply targeting-service http route
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/targeting-service/targeting-http-route.yaml"
+      register: output
+
+    - name: Verificar targeting-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+
+    - name: Apply evaluation-service
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/evaluation-service/"
+      register: output
+
+    - name: Verificar evaluation-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+    
+    - name: Apply evaluation-service http route
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/evaluation-service/evaluation-http-route.yaml"
+      register: output
+
+    - name: Verificar evaluation-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+
+    - name: Apply analytics-service
+      ansible.builtin.command: "kubectl apply -k {{ base_path }}/analytics-service/"
+      register: output
+
+    - name: Verificar analytics-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes
+    
+    - name: Apply analytics-service http route
+      ansible.builtin.command: "kubectl apply -f {{ base_path }}/analytics-service/analytics-http-route.yaml"
+      register: output
+
+    - name: Verificar analytics-service
+      debug:
+        var: output.stdout_lines
+      ignore_errors: yes

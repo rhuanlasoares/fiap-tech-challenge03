@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-connectivity-pod-1
+  namespace: evaluation-ns # Certifique-se de que este NS tem a label access=granted
+  labels:
+    app: evaluation-service-1 # Label exigida pela sua NetworkPolicy
+spec:
+  containers:
+  - name: curl-container
+    image: curlimages/curl
+    command: ["/bin/sh", "-c"]
+    args:
+    - |
+      echo "--- INICIANDO TESTE DE CONECTIVIDADE ---"
+      echo "Data: $(date)"
+      echo "Alvo: http://auth-service.auth-ns.svc:80/health"
+
+      # Tenta o curl com verbose e timeout de 10s
+      curl -v --connect-timeout 10 http://auth-service.auth-ns.svc:80/health
+
+      if [ $? -eq 0 ]; then
+        echo -e "\n\n✅ SUCESSO: Conexão estabelecida!"
+      else
+        echo -e "\n\n❌ FALHA: Não foi possível conectar (provável bloqueio de NetPol ou erro de porta)."
+      fi
+
+      echo "--- FIM DO TESTE ---"
+      # Mantém o pod vivo por 10 minutos para você ler os logs com calma
+        sleep 60
+  restartPolicy: Never

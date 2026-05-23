@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: evaluation-ns
+
+# 1. Correção do Ciclo: Liste os arquivos explicitamente
+resources:
+- evaluation-health-check.yaml
+- evaluation-netpol.yaml
+- evaluation-service-deployment.yaml
+- evaluation-service-hpa.yaml
+- evaluation-service-pdb.yaml
+- evaluation-service-secret.yaml
+- evaluation-service-serviceaccount.yaml
+- evaluation-service-svc.yaml
+
+# 2. Correção do Warning: Usando a nova sintaxe de labels
+labels:
+- includeSelectors: true
+  pairs:
+    app: evaluation-service
+
+# (O bloco patchesStrategicMerge foi removido, pois o deployment já está em resources)
+
+images:
+- name: evaluation-service
+  newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-evaluation/evaluation-service
+  newTag: d59e29e2395614cc57e8ff87c72ba9a6149df9b2

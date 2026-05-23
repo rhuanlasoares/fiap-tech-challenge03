@@ -1,0 +1,17 @@
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: analytics-keda
+  namespace: analytics-ns
+spec:
+  scaleTargetRef:
+    name: analytics-service
+  triggers:
+  - type: aws-sqs-queue
+    authenticationRef:
+      name: analytics-trigger
+    metadata:
+      queueURL: https://sqs.us-east-1.amazonaws.com/129874725379/toggle-master-analytics
+      queueLength: "5"
+      awsRegion: "us-east-1"

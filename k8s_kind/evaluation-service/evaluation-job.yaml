@@ -1,0 +1,61 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: evaluation-job-api-key
+  namespace: evaluation-ns
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: 
+        app: evaluation-job
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: sa-gke
+      containers:
+        - name: evaluation-job-api-key
+          image: google/cloud-sdk:slim
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+
+              apt-get update && apt-get install -y jq kubectl > /dev/null
+
+              echo "⏳ Aguardando auth-service ficar saudável em $AUTH_SERVICE_URL/health..."
+
+              # Loop que verifica se o JSON contém status: ok
+              # Usamos grep para não depender de jq logo no início
+              until [ "$(curl -s "$AUTH_SERVICE_URL/health" | jq -r '.status')" = "ok" ]; do
+                echo "Aguardando auth-service..."
+                sleep 2
+              done
+
+              echo "🔐 Criando API Key no auth-service..."
+
+              API_KEY=$(curl -X POST "$AUTH_SERVICE_URL/admin/keys" \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $MASTER_KEY" \
+                -d '{"name": "meu-primeiro-servico"}' | jq -r '.key')
+
+              echo "✅ API Key criada: $API_KEY"
+
+              echo "📦 Salvando API Key no Secret..."
+
+              kubectl create secret generic evaluation-api-secret \
+                --namespace evaluation-ns \
+                --from-literal=API_KEY="$API_KEY" \
+                --dry-run=client -o yaml | kubectl apply -f -
+          env:
+            - name: MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-db-secret
+                  key: MASTER_KEY
+            - name: AUTH_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: evaluation-db-secret
+                  key: AUTH_SERVICE_URL

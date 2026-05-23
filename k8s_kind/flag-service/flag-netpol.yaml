@@ -1,0 +1,24 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: flag-netpol
+  namespace: flag-ns
+spec:
+  podSelector:
+    matchLabels:
+      app: flag-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 8002
+  - from:
+    - podSelector:
+        matchLabels:
+          app: evaluation-service
+      namespaceSelector: {}
+  egress:
+  - {}

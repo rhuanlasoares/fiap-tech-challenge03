@@ -1,0 +1,25 @@
+# argocd/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: auth-application
+  namespace: argocd
+  labels:
+    app: auth-service
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:rhuanlasoares/fiap-tech-challenge03.git
+    targetRevision: main
+    path: k8s/auth-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: auth-ns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

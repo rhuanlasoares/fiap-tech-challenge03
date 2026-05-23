@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: analytics-ns
+
+# 1. Correção do Ciclo: Liste os arquivos explicitamente
+resources:
+- analytics-health-check.yaml
+- analytics-keda.yaml
+- analytics-netpol.yaml
+- analytics-service-deployment.yaml
+- analytics-service-pdb.yaml
+- analytics-service-secret.yaml
+- analytics-service-serviceaccount.yaml
+- analytics-service-svc.yaml
+- analytics-trigger.yaml
+
+# 2. Correção do Warning: Usando a nova sintaxe de labels
+labels:
+- includeSelectors: true
+  pairs:
+    app: analytics-service
+
+# (O bloco patchesStrategicMerge foi removido, pois o deployment já está em resources)
+
+images:
+- name: analytics-service
+  newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-analytics/analytics-service
+  newTag: d59e29e2395614cc57e8ff87c72ba9a6149df9b2

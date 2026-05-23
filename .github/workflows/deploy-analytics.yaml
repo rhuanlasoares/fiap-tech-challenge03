@@ -1,0 +1,87 @@
+name: 🔐 Pipeline — analytics-service (Python)
+
+on:
+  push:
+    branches: [main]
+    # paths: ["analytics-service/**"]
+  pull_request:
+    branches: [main]
+    # paths: ["analytics-service/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  issues: write
+  security-events: write
+
+env:
+  SERVICE: analytics-service
+  LANGUAGE: python
+  PYTHON_VERSION: "3.13.13"
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  lint:
+    name: 🔍 Lint
+    uses: ./.github/workflows/reusable-lint.yaml
+    with:
+      language: python
+      service_path: analytics-service
+      python_version: "3.13.13"
+    secrets:
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  sca:
+    name: 📦 SCA
+    needs: lint
+    uses: ./.github/workflows/reusable-sca.yaml
+    with:
+      language: python
+      service_path: analytics-service
+      block_on_critical: true
+      python_version: "3.13.13"
+    secrets:
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast:
+    name: 🔒 SAST
+    needs: lint
+    uses: ./.github/workflows/reusable-sast.yaml
+    with:
+      language: python
+      service_path: analytics-service
+      block_on_critical: true
+      python_version: "3.13.13"
+    secrets:
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  container-scan:
+    name: 🐳 Container Scan & Push GAR
+    needs: [sca, sast]
+    uses: ./.github/workflows/reusable-container-scan.yaml
+    with:
+      service_path: analytics-service
+      image_name: analytics-service
+      image_tag: ${{ github.sha }}
+      block_on_critical: true
+    secrets:
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  build-push-gitops:
+    name: 🚀 Build, Push and Update GitOps Manifests
+    needs: container-scan
+    uses: ./.github/workflows/build-push-gitops.yaml
+    with:
+      imageName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-analytics/analytics-service
+      imageTag: ${{ github.sha }}
+      nameService: analytics-service
+      region: southamerica-east1
+      service_path: analytics-service
+    secrets:
+      PROJECT_ID: ces-igniteprogram
+      WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
+      SERVICE_ACCOUNT: ${{ secrets.SERVICE_ACCOUNT }}

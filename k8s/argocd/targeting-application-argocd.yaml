@@ -1,0 +1,25 @@
+# argocd/application.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: targeting-application
+  namespace: argocd
+  labels:
+    app: targeting-service
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:rhuanlasoares/fiap-tech-challenge03.git
+    targetRevision: main
+    path: k8s/targeting-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: targeting-ns
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

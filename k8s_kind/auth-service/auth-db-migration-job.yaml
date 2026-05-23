@@ -1,0 +1,65 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: auth-db-migration
+  namespace: auth-ns
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: postgres:15
+          command:
+            - sh
+            - -c
+            - |
+              echo "⏳ Aguardando banco ficar disponível..."
+              until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER"; do
+                sleep 3
+              done
+
+              echo "🚀 Executando migration..."
+              PGPASSWORD="$DB_PASSWORD" psql \
+                -h "$DB_HOST" \
+                -p "$DB_PORT" \
+                -U "$DB_USER" \
+                -d "$DB_NAME" \
+                -f /migrations/init.sql
+
+              echo "✅ Migration concluída com sucesso"
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: DB_PORT
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: POSTGRES_USER
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: POSTGRES_DB
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: auth-secrets
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: migration-sql
+              mountPath: /migrations
+      volumes:
+        - name: migration-sql
+          configMap:
+            name: auth-db-init

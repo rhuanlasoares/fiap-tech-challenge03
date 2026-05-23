@@ -1,0 +1,176 @@
+services:
+  api-gateway:
+    image: nginx:alpine
+    container_name: api-gateway
+    profiles: ["test-auth", "test-flags", "test-targeting", "test-evaluation", "default"]
+    network_mode: "host" # <-- Adicionado
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    profiles: ["test-auth", "test-flags", "test-targeting", "test-evaluation", "default"]
+    network_mode: "host"
+    environment:
+      # URL alterada para localhost
+      DATABASE_URL: postgres://user:password@localhost:5432/authdb?sslmode=disable
+      MASTER_KEY: super-secret-master-key
+      PORT: 8001
+    depends_on:
+      db-auth-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  flag-service:
+    build: ./flag-service
+    container_name: flag-service
+    profiles: ["test-flags", "default"]
+    network_mode: "host"
+    environment:
+      # URL alterada para localhost e porta 5433
+      DATABASE_URL: postgres://user:password@localhost:5433/flags_db
+      AUTH_SERVICE_URL: http://localhost:8001/auth-service
+      PORT: 8002
+    depends_on:
+      db-flags-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  targeting-service:
+    build: ./targeting-service
+    container_name: targeting-service
+    profiles: ["test-targeting", "default"]
+    network_mode: "host"
+    environment:
+      # URL alterada para localhost e porta 5434
+      DATABASE_URL: postgres://user:password@localhost:5434/targeting_db
+      AUTH_SERVICE_URL: http://localhost:8001/auth-service
+      PORT: 8003
+    depends_on:
+      db-targeting-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  evaluation-service:
+    build: ./evaluation-service
+    container_name: evaluation-service
+    profiles: ["test-evaluation", "default"]
+    network_mode: "host"
+    environment:
+      REDIS_URL: redis://localhost:6379
+      FLAG_SERVICE_URL: http://localhost:8002/flag-service
+      TARGETING_SERVICE_URL: http://localhost:8003/targeting-service
+      AWS_SQS_URL: XXX
+      AWS_REGION: us-east-1
+      PORT: 8004
+      AWS_ACCESS_KEY_ID: XXX
+      AWS_SECRET_ACCESS_KEY: XXX
+      AWS_SESSION_TOKEN: XXX
+    depends_on:
+      redis:
+        condition: service_healthy
+      init-api-key:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    volumes:
+      - shared-data:/shared
+
+  analytics-service:
+    build: ./analytics-service
+    container_name: analytics-service
+    profiles: ["test-analytics", "default"]
+    network_mode: "host"
+    environment:
+      AWS_SQS_URL: XXX
+      AWS_DYNAMODB_TABLE: ToggleMasterAnalytics
+      AWS_REGION: us-east-1
+      PORT: 8005
+      AWS_ACCESS_KEY_ID: XXX
+      AWS_SECRET_ACCESS_KEY: XXX
+      AWS_SESSION_TOKEN: XXX
+
+  init-api-key:
+    image: alpine:3.19
+    profiles: ["test-evaluation", "default"]
+    network_mode: "host"
+    depends_on:
+      - auth-service
+    volumes:
+      - ./generate-key.sh:/generate-key.sh
+      - shared-data:/shared
+    environment:
+      AUTH_SERVICE_URL: http://localhost:8001/auth-service
+      MASTER_KEY: super-secret-master-key
+    entrypoint: >
+      sh -c "
+        apk add --no-cache curl jq &&
+        chmod +x /generate-key.sh &&
+        /generate-key.sh
+      "
+
+  redis:
+    image: redis:7
+    container_name: redis
+    profiles: ["test-evaluation", "default"]
+    network_mode: "host"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-h", "localhost", "ping"]
+    volumes:
+      - redis_data:/data
+
+  db-auth-service:
+    image: postgres:15
+    container_name: auth-postgres
+    profiles: ["test-auth", "test-flags", "test-targeting", "test-evaluation", "default"]
+    network_mode: "host"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: authdb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5432 -U user -d authdb"]
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./auth-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  db-flags-service:
+    image: postgres:15
+    container_name: flags-postgres
+    profiles: ["test-flags", "default"]
+    network_mode: "host"
+    command: -p 5433 # Força o Postgres a rodar em outra porta para evitar conflito no host
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: flags_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5433 -U user -d flags_db"]
+    volumes:
+      - postgres_flags_data:/var/lib/postgresql/data
+      - ./flag-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  db-targeting-service:
+    image: postgres:15
+    container_name: targeting-postgres
+    profiles: ["test-targeting", "default"]
+    network_mode: "host"
+    command: -p 5434 # Força o Postgres a rodar em outra porta
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: targeting_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 5434 -U user -d targeting_db"]
+    volumes:
+      - postgres_targeting_data:/var/lib/postgresql/data
+      - ./targeting-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+volumes:
+  postgres_auth_data:
+  postgres_flags_data:
+  postgres_targeting_data:
+  redis_data:
+  shared-data:

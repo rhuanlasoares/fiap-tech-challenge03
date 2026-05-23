@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: auth-ns
+
+# 1. Correção do Ciclo: Liste os arquivos explicitamente
+resources:
+- auth-service-deployment.yaml
+- auth-health-check.yaml
+- auth-netpol.yaml
+- auth-service-configmap.yaml
+- auth-service-pdb.yaml
+- auth-service-secret.yaml
+- auth-service-serviceaccount.yaml
+- auth-service-svc.yaml
+- auth-service-hpa.yaml
+- auth-db-migration-job.yaml
+
+# 2. Correção do Warning: Usando a nova sintaxe de labels
+labels:
+- includeSelectors: true
+  pairs:
+    app: auth-service
+
+# (O bloco patchesStrategicMerge foi removido, pois o deployment já está em resources)
+
+images:
+- name: auth-service
+  newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-auth/auth-service
+  newTag: 6077e96a905d28991e78b2e732c7b4eeaa679ea9

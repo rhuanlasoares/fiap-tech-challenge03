@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: targeting-ns
+
+# 1. Correção do Ciclo: Liste os arquivos explicitamente
+resources:
+- targeting-db-migration-job.yaml
+- targeting-health-check.yaml
+- targeting-netpol.yaml
+- targeting-service-configmap.yaml
+- targeting-service-deployment.yaml
+- targeting-service-pdb.yaml
+- targeting-service-secret.yaml
+- targeting-service-serviceaccount.yaml
+- targeting-service-svc.yaml
+- targeting-service-hpa.yaml
+
+# 2. Correção do Warning: Usando a nova sintaxe de labels
+labels:
+- includeSelectors: true
+  pairs:
+    app: targeting-service
+
+# (O bloco patchesStrategicMerge foi removido, pois o deployment já está em resources)
+
+images:
+- name: targeting-service
+  newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-targeting/targeting-service
+  newTag: d59e29e2395614cc57e8ff87c72ba9a6149df9b2

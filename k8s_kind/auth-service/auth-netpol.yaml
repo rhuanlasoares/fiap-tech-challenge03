@@ -1,0 +1,32 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: auth-netpol
+  namespace: auth-ns
+spec:
+  podSelector:
+    matchLabels:
+      app: auth-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 8001
+  - from:
+    - podSelector:
+        matchLabels:
+          app: flag-service
+    - podSelector:
+        matchLabels:
+          app: targeting-service
+    - podSelector:
+        matchLabels:
+          app: evaluation-service
+    - podSelector:
+        matchLabels:
+          app: evaluation-job
+  egress:
+  - {}

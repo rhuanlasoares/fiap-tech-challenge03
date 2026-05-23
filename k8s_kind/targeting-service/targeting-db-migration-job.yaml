@@ -1,0 +1,42 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: targeting-db-migration
+  namespace: targeting-ns
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: postgres:15
+          command:
+            - sh
+            - -c
+            - |
+              echo "⏳ Aguardando banco ficar disponível..."
+              until pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER"; do
+                sleep 3
+              done
+
+              echo "🚀 Executando migration..."
+              PGPASSWORD="$DB_PASSWORD" psql \
+                -h "$DB_HOST" \
+                -p "$DB_PORT" \
+                -U "$DB_USER" \
+                -d "$DB_NAME" \
+                -f /migrations/init.sql
+
+              echo "✅ Migration concluída com sucesso"
+          envFrom:
+            - secretRef:
+                name: targeting-secrets
+          volumeMounts:
+            - name: migration-sql
+              mountPath: /migrations
+      volumes:
+        - name: migration-sql
+          configMap:
+            name: targeting-db-init
