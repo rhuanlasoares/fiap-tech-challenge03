@@ -26,4 +26,4 @@ labels:
 images:
 - name: auth-service
   newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-auth/auth-service
-  newTag: 6077e96a905d28991e78b2e732c7b4eeaa679ea9
+  newTag: 5a1d1ec796b1fce1f60e82b59f71fdc01400d600
