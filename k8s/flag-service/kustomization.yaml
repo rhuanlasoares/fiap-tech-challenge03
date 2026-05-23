@@ -26,4 +26,4 @@ labels:
 images:
 - name: flag-service
   newName: southamerica-east1-docker.pkg.dev/ces-igniteprogram/artreg-flag/flag-service
-  newTag: b0fbc7f99eec223b13dd965c45a25deaeaf4192e
+  newTag: cade864676df07941b62cceb7038d5b354be73d6
