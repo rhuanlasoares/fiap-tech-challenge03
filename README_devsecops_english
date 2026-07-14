@@ -1,0 +1,96 @@
+# 🛡️ DevSecOps Workflows — Documentation
+
+This repository uses a module-oriented CI/CD architecture based on **GitHub Actions**. The goal is to ensure that all applications go through a strict code quality and security process before being published and updated in the environment via GitOps.
+
+## 🚀 1. Deploy Workflows (Main Pipelines)
+
+The deploy workflows are the entry points for each service. They orchestrate the calls to the reusable DevSecOps workflows, ensuring that the application lifecycle follows standardized and secure steps.
+
+Currently, the following services have configured deploy pipelines:
+
+* **Python:** `analytics-service`, `flag-service`, `targeting-service`.
+* **Golang:** `auth-service`, `evaluation-service`.
+
+### Execution Triggers
+
+All main pipelines are triggered under the following conditions:
+
+* **Push** to the `main` branch.
+* **Pull Request** to the `main` branch.
+* **Manual trigger** (`workflow_dispatch`).
+
+### Execution Order (Pipeline Flow)
+
+Each pipeline strictly executes the steps in the following order:
+
+1. **Lint** (Quality and Formatting)
+2. **SCA** (Software Composition Analysis)
+3. **SAST** (Static Application Security Testing)
+4. **Container Scan** (Docker Image Scan)
+5. **Build, Push & GitOps** (Manifest Build and Update)
+
+---
+
+## ♻️ 2. Reusable Workflows (DevSecOps Modules)
+
+The main pipelines delegate task execution to reusable files (`workflow_call`). Below are the details of each module.
+
+### 2.1. Lint (`reusable-lint.yaml`)
+
+Responsible for ensuring visual standards and language best practices.
+
+* **Smart Behavior:** Attempts to automatically fix formatting errors and *commits* the changes back to the `main` branch.
+* **Python Stack:** Uses `black` and `isort` for automatic formatting; validates style with `flake8` and `pylint`.
+* **Go Stack:** Uses `gofmt` and `golangci-lint` (with the `--fix` flag).
+* **Report:** Generates a GitHub *Issue* detailing the automatic corrections and listing residual errors that require manual intervention.
+
+### 2.2. SCA — Software Composition Analysis (`reusable-sca.yaml`)
+
+Analyzes third-party project dependencies (libraries) for known vulnerabilities (CVEs).
+
+* **Tools:**
+* **Trivy:** Scans the file system, blocking the pipeline if it finds **CRITICAL** flaws (if configured).
+* **OWASP Dependency Check:** Second security layer configured to fail the pipeline if it finds vulnerabilities with a **CVSS score of 9 or higher**.
+
+
+* **Report:** Opens or updates separate GitHub *Issues* for Trivy and OWASP findings.
+
+### 2.3. SAST — Static Application Security Testing (`reusable-sast.yaml`)
+
+Searches for security flaws directly in the developed source code and checks for credential leaks.
+
+* **Python Stack:** Uses `bandit`. Fails the pipeline if it finds **HIGH** vulnerabilities.
+* **Go Stack:** Uses `gosec`. Fails the pipeline if it finds **HIGH** or **CRITICAL** vulnerabilities.
+* **Secret Scan:** Uses Trivy (`scan-type: fs`, scanner `secret`) to scan the entire directory for exposed passwords, API keys, and tokens. Blocks the deploy if it finds **HIGH** or **CRITICAL** secrets.
+* **Report:** Consolidates the findings and documents them in the repository's *Issues* tab.
+
+### 2.4. Container Scan (`reusable-container-scan.yaml`)
+
+Focused on application packaging security before pushing to the *registry*.
+
+* **Local Build:** Builds the Docker image locally on the runner without pushing it.
+* **Configuration Scan (Misconfigurations):** Uses Trivy to analyze the `Dockerfile` for bad practices (e.g., running the image as *root*). Fails on **HIGH** or **CRITICAL** flaws.
+* **Image Scan (CVEs):** Trivy scans the layers of the newly built image for vulnerable OS packages.
+* **Report:** Creates dedicated *Issues* for misconfigurations and image vulnerabilities.
+
+### 2.5. Build, Push, and GitOps (`build-push-gitops.yaml`)
+
+The final stage of the pipeline occurs only if all previous security and quality validations pass successfully.
+
+* **Authentication:** Uses *Workload Identity Federation* (`google-github-actions/auth`) to securely access Google Cloud without using long-term static keys.
+* **Build & Push:** Configures `Docker Buildx` (leveraging cache) and pushes the image with the tag corresponding to the commit SHA and the `latest` tag to the **Google Artifact Registry (GAR)**.
+* **GitOps Update (Kustomize):**
+1. Installs `kustomize` on the *runner*.
+2. Navigates to the manifests directory (`k8s/${nameService}`) and runs `kustomize edit set image` to replace the image with the new version.
+3. *Commits* the changes to `kustomization.yaml` back into the repository.
+4. Validates the final manifests by running `kustomize build` locally to prevent syntax errors.
+
+
+
+---
+
+## 📊 3. Vulnerability Management (Issue Tracking)
+
+One of the major differentiators of these pipelines is the active generation of reports. Instead of forcing the developer to read the GitHub Actions logs to understand the flaws, the libraries extract JSON reports (Trivy, Gosec, Bandit, OWASP) and convert them into Markdown format.
+
+These reports use the `JasonEtco/create-an-issue` *Action* to automatically open, update, and centralize vulnerabilities and fixes in the **GitHub Issues** tab, ensuring traceability and streamlining the management of the security backlog.
